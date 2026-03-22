@@ -3,9 +3,10 @@
 #   make install              — build + install, listen on 127.0.0.1:1080, no auth
 #   make reinstall            — uninstall then install (useful after config changes)
 #   make uninstall            — stop and remove unit + binary
+#   make fetch                — download latest release binary into dist/ (auto-detects arch)
 #
-# VPS / public install with auth:
-#   make install HOST=0.0.0.0 SOCKS5_USER=alice SOCKS5_PASS=secret
+# VPS quick install (no Go required):
+#   make fetch && make install HOST=0.0.0.0 SOCKS5_USER=alice SOCKS5_PASS=secret
 #
 # Override individual params:
 #   make install PORT=1081
@@ -67,10 +68,22 @@ define build-openwrt
 	@ls -lh $(DIST)/tg-ws-go-$(2)
 endef
 
-.PHONY: all build install reinstall uninstall \
+GITHUB_REPO ?= shngxx/tg-ws-go
+FETCH_URL   := https://github.com/$(GITHUB_REPO)/releases/latest/download
+
+.PHONY: all build fetch install reinstall uninstall \
         openwrt-all openwrt-mips openwrt-mipsel openwrt-arm openwrt-arm64 openwrt-x86
 
 all: build
+
+fetch:
+	@mkdir -p $(DIST)
+	$(eval _ARCH := $(shell uname -m | sed 's/aarch64/arm64/;s/armv[0-9].*/arm/'))
+	$(eval _NAME := tg-ws-go-$(_ARCH))
+	@echo "Fetching $(FETCH_URL)/$(_NAME) → $(BINARY)"
+	wget -q --show-progress --timeout=30 -O $(BINARY) "$(FETCH_URL)/$(_NAME)"
+	chmod +x $(BINARY)
+	@echo "Done: $(BINARY) ($$(du -sh $(BINARY) | cut -f1))"
 
 build: $(BINARY)
 
