@@ -126,7 +126,7 @@ func (m *MsgSplitter) Split(chunk []byte) [][]byte {
 			if pos+4 > len(plain) {
 				break
 			}
-			msgLen = int(binary.LittleEndian.Uint32(plain[pos+1:pos+4])&0xFFFFFF) * 4
+			msgLen = (int(plain[pos+1]) | int(plain[pos+2])<<8 | int(plain[pos+3])<<16) * 4
 			pos += 4
 		} else {
 			msgLen = int(first) * 4

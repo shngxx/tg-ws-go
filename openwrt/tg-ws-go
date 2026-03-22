@@ -9,8 +9,11 @@ ARCH=mipsel
 DOWNLOAD_URL="https://github.com/shngxx/tg-ws-go/releases/latest/download/tg-ws-go-${ARCH}"
 
 FLAGS="-host 0.0.0.0 -port 1080 \
+  --dc-ip 1:149.154.175.53 \
   --dc-ip 2:149.154.167.220 \
+  --dc-ip 3:149.154.175.100 \
   --dc-ip 4:149.154.167.91 \
+  --dc-ip 5:91.108.56.100 \
   --pool-size 0 \
   --buf-kb 32"
 
