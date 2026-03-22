@@ -15,12 +15,61 @@ BINARY   := tg-ws-go
 
 TG_WS_GO_FLAGS ?= -host 127.0.0.1 -port 1080 --dc-ip 2:149.154.167.220 --dc-ip 4:149.154.167.91
 
-.PHONY: all build install reinstall uninstall
+# OpenWrt cross-compilation
+#
+#   make openwrt-all            — build for all common OpenWrt targets → dist/
+#   make openwrt-mips           — mips softfloat  (TP-Link, Asus, old MT7620/AR9xxx)
+#   make openwrt-mipsel         — mipsel softfloat (Ralink RT305x, etc.)
+#   make openwrt-arm            — armv7 (Cortex-A7/A9 routers)
+#   make openwrt-arm64          — aarch64 (Raspberry Pi, newer routers)
+#   make openwrt-x86            — x86_64 (PC Engines APU, x86 routers)
+#
+# Compress with UPX (optional, requires upx in PATH):
+#   make openwrt-all COMPRESS=1
+#
+# Override binary flags after deploy:
+#   /tmp/tg-ws-go -host 0.0.0.0 -port 1080 --dc-ip 2:149.154.167.220
+
+DIST     := dist
+LDFLAGS  := -s -w
+COMPRESS ?= 0
+
+define build-openwrt
+	mkdir -p $(DIST)
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(1) GOMIPS=$(3) go build -ldflags "$(LDFLAGS)" -o $(DIST)/tg-ws-go-$(2) .
+	@if [ "$(COMPRESS)" = "1" ] && command -v upx >/dev/null 2>&1; then \
+		upx --best $(DIST)/tg-ws-go-$(2); \
+	fi
+	@ls -lh $(DIST)/tg-ws-go-$(2)
+endef
+
+.PHONY: all build install reinstall uninstall \
+        openwrt-all openwrt-mips openwrt-mipsel openwrt-arm openwrt-arm64 openwrt-x86
 
 all: build
 
 build:
 	go build -o tg-ws-go .
+
+openwrt-mips:
+	$(call build-openwrt,mips,mips,softfloat)
+
+openwrt-mipsel:
+	$(call build-openwrt,mipsle,mipsel,softfloat)
+
+openwrt-arm:
+	$(call build-openwrt,arm,arm,)
+
+openwrt-arm64:
+	$(call build-openwrt,arm64,arm64,)
+
+openwrt-x86:
+	$(call build-openwrt,amd64,x86_64,)
+
+openwrt-all: openwrt-mips openwrt-mipsel openwrt-arm openwrt-arm64 openwrt-x86
+	@echo ""
+	@echo "OpenWrt binaries built in $(DIST)/:"
+	@ls -lh $(DIST)/
 
 install: build
 	install -Dm755 $(BINARY) $(BINDIR)/tg-ws-go
