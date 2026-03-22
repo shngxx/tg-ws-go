@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -21,8 +22,9 @@ func socks5Reply(status byte) []byte {
 	return socks5Replies[0x05]
 }
 
-// socks5ReadGreeting reads SOCKS5 greeting and writes no-auth response.
-func socks5ReadGreeting(r io.Reader, w io.Writer) error {
+// socks5ReadGreeting reads SOCKS5 greeting. If user/pass are non-empty, requires
+// username/password auth per RFC 1929; otherwise accepts no-auth connections.
+func socks5ReadGreeting(r io.Reader, w io.Writer, user, pass string) error {
 	var hdr [2]byte
 	if _, err := io.ReadFull(r, hdr[:]); err != nil {
 		return err
@@ -35,10 +37,61 @@ func socks5ReadGreeting(r io.Reader, w io.Writer) error {
 	if _, err := io.ReadFull(r, methods); err != nil {
 		return err
 	}
-	if _, err := w.Write([]byte{0x05, 0x00}); err != nil {
+
+	if user == "" {
+		_, err := w.Write([]byte{0x05, 0x00})
 		return err
 	}
-	return nil
+
+	// Require method 0x02 (username/password, RFC 1929).
+	hasPassAuth := false
+	for _, m := range methods {
+		if m == 0x02 {
+			hasPassAuth = true
+			break
+		}
+	}
+	if !hasPassAuth {
+		_, _ = w.Write([]byte{0x05, 0xFF}) // no acceptable methods
+		return fmt.Errorf("client does not support password auth")
+	}
+	if _, err := w.Write([]byte{0x05, 0x02}); err != nil {
+		return err
+	}
+
+	// Auth sub-negotiation (RFC 1929).
+	var ver [1]byte
+	if _, err := io.ReadFull(r, ver[:]); err != nil {
+		return err
+	}
+	if ver[0] != 1 {
+		return fmt.Errorf("bad auth subnegotiation version %d", ver[0])
+	}
+	var ulen [1]byte
+	if _, err := io.ReadFull(r, ulen[:]); err != nil {
+		return err
+	}
+	uname := make([]byte, int(ulen[0]))
+	if _, err := io.ReadFull(r, uname); err != nil {
+		return err
+	}
+	var plen [1]byte
+	if _, err := io.ReadFull(r, plen[:]); err != nil {
+		return err
+	}
+	passwd := make([]byte, int(plen[0]))
+	if _, err := io.ReadFull(r, passwd); err != nil {
+		return err
+	}
+
+	userMatch := subtle.ConstantTimeCompare(uname, []byte(user))
+	passMatch := subtle.ConstantTimeCompare(passwd, []byte(pass))
+	if (userMatch & passMatch) != 1 {
+		_, _ = w.Write([]byte{0x01, 0xFF})
+		return fmt.Errorf("auth failed")
+	}
+	_, err := w.Write([]byte{0x01, 0x00})
+	return err
 }
 
 // socks5ReadConnect reads SOCKS5 CONNECT and returns IPv4/domain destination, port.

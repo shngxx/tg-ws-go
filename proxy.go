@@ -23,21 +23,25 @@ const (
 // Server is the SOCKS5 + Telegram WS bridge (stateful, concurrent-safe).
 type Server struct {
 	DcOpt map[int]string
+	User  string
+	Pass  string
 
 	Pool     *WsPool
 	Stats    *Stats
 	Log      *slog.Logger
 	BufBytes int
 
-	mu           sync.RWMutex
-	wsBlacklist  map[dcMediaKey]struct{}
-	dcFailUntil  map[dcMediaKey]time.Time
+	mu          sync.RWMutex
+	wsBlacklist map[dcMediaKey]struct{}
+	dcFailUntil map[dcMediaKey]time.Time
 }
 
 // NewServer constructs server state.
-func NewServer(dcOpt map[int]string, pool *WsPool, stats *Stats, log *slog.Logger, bufKB int) *Server {
+func NewServer(dcOpt map[int]string, user, pass string, pool *WsPool, stats *Stats, log *slog.Logger, bufKB int) *Server {
 	return &Server{
 		DcOpt:       maps.Clone(dcOpt),
+		User:        user,
+		Pass:        pass,
 		Pool:        pool,
 		Stats:       stats,
 		Log:         log,
@@ -62,12 +66,16 @@ func (s *Server) Run(ctx context.Context, host string, port int) error {
 		_ = ln.Close()
 	}()
 
-	s.Log.Info("Telegram WS Bridge Proxy")
+	s.Log.Info("Telegram WS Bridge Proxy", "version", Version)
 	s.Log.Info("listening", "addr", addr)
 	for dc, ip := range s.DcOpt {
 		s.Log.Info("target DC", "dc", dc, "ip", ip)
 	}
-	s.Log.Info("configure Telegram Desktop", "socks5", addr, "auth", "none")
+	authInfo := "none"
+	if s.User != "" {
+		authInfo = s.User + ":***"
+	}
+	s.Log.Info("configure Telegram Desktop", "socks5", addr, "auth", authInfo)
 
 	go s.logStatsLoop(ctx)
 	s.Pool.Warmup(s.DcOpt)
@@ -159,7 +167,7 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
 
-	if err := socks5ReadGreeting(conn, conn); err != nil {
+	if err := socks5ReadGreeting(conn, conn, s.User, s.Pass); err != nil {
 		s.Log.Debug("SOCKS5 greeting failed", "peer", label, "err", err)
 		_ = conn.Close()
 		return

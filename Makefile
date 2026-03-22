@@ -1,19 +1,44 @@
 # tg-ws-go — user-local install + systemd --user unit (Linux)
 #
-#   make install    — build binary, install to ~/.local/bin, register systemd user unit, start
-#   make reinstall  — uninstall then install (useful after binary/flag changes)
-#   make uninstall  — stop and remove unit + binary
+#   make install              — build + install, listen on 127.0.0.1:1080, no auth
+#   make reinstall            — uninstall then install (useful after config changes)
+#   make uninstall            — stop and remove unit + binary
 #
-# Override proxy flags:
-#   make install TG_WS_GO_FLAGS="-v -port 1080 --dc-ip 2:149.154.167.220"
+# VPS / public install with auth:
+#   make install HOST=0.0.0.0 SOCKS5_USER=alice SOCKS5_PASS=secret
+#
+# Override individual params:
+#   make install PORT=1081
+#   make install HOST=0.0.0.0 SOCKS5_USER=alice SOCKS5_PASS=secret PORT=1080
+#
+# Override all flags at once (advanced):
+#   make install TG_WS_GO_FLAGS="-host 0.0.0.0 -port 1080 --user alice --pass secret"
 
+DIST     := dist
 PREFIX   := $(HOME)/.local
 BINDIR   := $(PREFIX)/bin
 UNITDIR  := $(HOME)/.config/systemd/user
 UNIT     := $(UNITDIR)/tg-ws-go.service
-BINARY   := tg-ws-go
+BINARY   := $(DIST)/tg-ws-go
 
-TG_WS_GO_FLAGS ?= -host 127.0.0.1 -port 1080 --dc-ip 2:149.154.167.220 --dc-ip 4:149.154.167.91
+HOST        ?= 127.0.0.1
+PORT        ?= 1080
+SOCKS5_USER ?=
+SOCKS5_PASS ?=
+
+_BASE_FLAGS := -host $(HOST) -port $(PORT) \
+  --dc-ip 1:149.154.175.53 \
+  --dc-ip 2:149.154.167.220 \
+  --dc-ip 3:149.154.175.100 \
+  --dc-ip 4:149.154.167.91 \
+  --dc-ip 5:91.108.56.100 \
+  --dc-ip 203:91.105.192.100
+
+ifneq ($(SOCKS5_USER),)
+_BASE_FLAGS += --user $(SOCKS5_USER) --pass $(SOCKS5_PASS)
+endif
+
+TG_WS_GO_FLAGS ?= $(_BASE_FLAGS)
 
 # OpenWrt cross-compilation
 #
@@ -30,7 +55,6 @@ TG_WS_GO_FLAGS ?= -host 127.0.0.1 -port 1080 --dc-ip 2:149.154.167.220 --dc-ip 4
 # Override binary flags after deploy:
 #   /tmp/tg-ws-go -host 0.0.0.0 -port 1080 --dc-ip 2:149.154.167.220
 
-DIST     := dist
 LDFLAGS  := -s -w
 COMPRESS ?= 0
 
@@ -49,7 +73,7 @@ endef
 all: build
 
 build:
-	go build -o tg-ws-go .
+	go build -o $(DIST)/tg-ws-go .
 
 openwrt-mips:
 	$(call build-openwrt,mips,mips,softfloat)

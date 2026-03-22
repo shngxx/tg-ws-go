@@ -15,6 +15,8 @@ import (
 func main() {
 	port := flag.Int("port", 1080, "Listen port")
 	host := flag.String("host", "127.0.0.1", "Listen host")
+	user := flag.String("user", "", "SOCKS5 username (enables auth if set)")
+	pass := flag.String("pass", "", "SOCKS5 password")
 	verbose := flag.Bool("v", false, "Verbose (debug) logging")
 	logFile := flag.String("log-file", "", "Log file path (optional)")
 	logMaxMB := flag.Float64("log-max-mb", 5, "Max log file size in MB before rotation")
@@ -76,7 +78,7 @@ func main() {
 
 	stats := &Stats{}
 	pool := NewWsPool(max(0, *poolSize), max(4, *bufKB)*1024, log, stats)
-	srv := NewServer(dcOpt, pool, stats, log, *bufKB)
+	srv := NewServer(dcOpt, *user, *pass, pool, stats, log, *bufKB)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
