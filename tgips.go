@@ -57,8 +57,9 @@ var ipToDC = map[string]DCEntry{
 	"149.154.175.50": {1, false}, "149.154.175.51": {1, false},
 	"149.154.175.53": {1, false}, "149.154.175.54": {1, false},
 	"149.154.175.52": {1, true},
-	"149.154.167.41": {2, false}, "149.154.167.50": {2, false},
-	"149.154.167.51": {2, false}, "149.154.167.220": {2, false},
+	"149.154.167.41": {2, false}, "149.154.167.43": {2, false},
+	"149.154.167.50": {2, false}, "149.154.167.51": {2, false},
+	"149.154.167.220": {2, false},
 	"95.161.76.100":   {2, false},
 	"149.154.167.151": {2, true}, "149.154.167.222": {2, true},
 	"149.154.167.223": {2, true}, "149.154.162.123": {2, true},
@@ -74,6 +75,27 @@ var ipToDC = map[string]DCEntry{
 	"91.108.56.102": {5, true}, "91.108.56.128": {5, true},
 	"91.108.56.151":  {5, true},
 	"91.105.192.100": {203, false},
+}
+
+// ipv6ToDC maps known Telegram IPv6 addresses to DC id and media flag.
+var ipv6ToDC = map[string]DCEntry{
+	"2001:b28:f23d:f001::a": {1, false},
+	"2001:b28:f23d:f001::b": {1, true},
+	"2001:67c:4e8:f002::a":  {2, false},
+	"2001:67c:4e8:f002::b":  {2, true},
+	"2001:b28:f23d:f003::a": {3, false},
+	"2001:b28:f23d:f003::b": {3, true},
+	"2001:67c:4e8:f004::a":  {4, false},
+	"2001:67c:4e8:f004::b":  {4, true},
+	"2001:b28:f23f:f005::a": {5, false},
+	"2001:b28:f23f:f005::b": {5, true},
+	"2a0a:f280:203:a:5000::100": {203, false},
+}
+
+// IsTelegramIPv6 reports whether s is a known Telegram IPv6 address.
+func IsTelegramIPv6(s string) bool {
+	_, ok := ipv6ToDC[s]
+	return ok
 }
 
 // dcOverrides maps special DC ids to relay DC (e.g. 203 -> 2).

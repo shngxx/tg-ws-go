@@ -176,14 +176,14 @@ func (s *Server) handleClient(conn net.Conn) {
 		return
 	}
 
-	if strings.Contains(dst, ":") {
-		s.Log.Error("IPv6 not supported; disable IPv6 in Telegram", "peer", label, "dst", dst, "port", port)
+	if strings.Contains(dst, ":") && !IsTelegramIPv6(dst) {
+		s.Log.Debug("non-Telegram IPv6, rejecting", "peer", label, "dst", dst, "port", port)
 		_, _ = conn.Write(socks5Reply(0x05))
 		_ = conn.Close()
 		return
 	}
 
-	if !IsTelegramIP(dst) {
+	if !IsTelegramIP(dst) && !IsTelegramIPv6(dst) {
 		_ = conn.SetDeadline(time.Time{})
 		s.handlePassthrough(conn, label, dst, port)
 		return
@@ -213,7 +213,12 @@ func (s *Server) handleClient(conn net.Conn) {
 	dc, isMedia, ok := DcFromInit(init)
 	initPatched := false
 	if !ok {
-		if ent, has := ipToDC[dst]; has {
+		var ent DCEntry
+		var has bool
+		if ent, has = ipToDC[dst]; !has {
+			ent, has = ipv6ToDC[dst]
+		}
+		if has {
 			dc, isMedia = ent.DC, ent.IsMedia
 			if _, in := s.DcOpt[dc]; in {
 				signed := int16(dc) // #nosec G115 -- dc is validated to be 1-5 or 203, safe to narrow
