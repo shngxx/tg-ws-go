@@ -72,8 +72,11 @@ endef
 
 all: build
 
-build:
-	go build -o $(DIST)/tg-ws-go .
+build: $(BINARY)
+
+$(BINARY): $(wildcard *.go)
+	mkdir -p $(DIST)
+	go build -o $(BINARY) .
 
 openwrt-mips:
 	$(call build-openwrt,mips,mips,softfloat)
@@ -95,7 +98,7 @@ openwrt-all: openwrt-mips openwrt-mipsel openwrt-arm openwrt-arm64 openwrt-x86
 	@echo "OpenWrt binaries built in $(DIST)/:"
 	@ls -lh $(DIST)/
 
-install: build
+install: $(BINARY)
 	install -Dm755 $(BINARY) $(BINDIR)/tg-ws-go
 	mkdir -p $(UNITDIR)
 	@printf '%s\n' \
