@@ -382,7 +382,15 @@ func (s *Server) handlePassthrough(conn net.Conn, label, dst string, port int) {
 }
 
 func (s *Server) tcpFallback(client net.Conn, label, dst string, port int, init []byte, dc int, isMedia bool) {
-	raddr := net.JoinHostPort(dst, strconv.Itoa(port))
+	// For IPv6 Telegram addresses, use the configured IPv4 DC address instead,
+	// since routers typically don't have IPv6 connectivity.
+	target := dst
+	if strings.Contains(dst, ":") {
+		if ip4, ok := s.DcOpt[dc]; ok && ip4 != "" {
+			target = ip4
+		}
+	}
+	raddr := net.JoinHostPort(target, strconv.Itoa(port))
 	remote, err := net.DialTimeout("tcp", raddr, 10*time.Second)
 	if err != nil {
 		s.Log.Warn("TCP fallback connect failed", "peer", label, "dst", dst, "port", port, "err", err)
@@ -395,7 +403,7 @@ func (s *Server) tcpFallback(client net.Conn, label, dst string, port int, init 
 		_ = client.Close()
 		return
 	}
-	BridgeTCPWithStats(client, remote, label, dc, dst, port, isMedia, s.Stats, s.Log)
+	BridgeTCPWithStats(client, remote, label, dc, target, port, isMedia, s.Stats, s.Log)
 }
 
 // ParseDcIPList parses repeated "DC:IP" flags into a map (last wins).
