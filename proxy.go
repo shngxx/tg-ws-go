@@ -311,7 +311,6 @@ func (s *Server) handleClient(conn net.Conn) {
 		}
 		s.mu.Unlock()
 
-		s.Log.Info("TCP fallback", "peer", label, "dc", dc, "dst", dst, "port", port)
 		s.tcpFallback(conn, label, dst, port, init, dc, isMedia)
 		return
 	}
@@ -390,6 +389,7 @@ func (s *Server) tcpFallback(client net.Conn, label, dst string, port int, init 
 			target = ip4
 		}
 	}
+	s.Log.Info("TCP fallback", "peer", label, "dc", dc, "dst", target, "port", port)
 	raddr := net.JoinHostPort(target, strconv.Itoa(port))
 	remote, err := net.DialTimeout("tcp", raddr, 10*time.Second)
 	if err != nil {

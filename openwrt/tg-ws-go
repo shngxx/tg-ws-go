@@ -18,9 +18,24 @@ FLAGS="-host 0.0.0.0 -port 1080 \
   --pool-size 0 \
   --buf-kb 32"
 
+wait_for_network() {
+    local tries=0
+    while [ $tries -lt 30 ]; do
+        if wget -q --timeout=5 -O /dev/null "https://github.com" 2>/dev/null; then
+            return 0
+        fi
+        tries=$((tries + 1))
+        logger -t tg-ws-go "waiting for network... ($tries/30)"
+        sleep 2
+    done
+    logger -t tg-ws-go "ERROR: network not available after 60s"
+    return 1
+}
+
 download_binary() {
+    wait_for_network || return 1
     logger -t tg-ws-go "downloading binary from $DOWNLOAD_URL"
-    wget -q --timeout=30 -O "${BINARY}.tmp" "$DOWNLOAD_URL" && \
+    wget -q --timeout=60 -O "${BINARY}.tmp" "$DOWNLOAD_URL" && \
         mv "${BINARY}.tmp" "$BINARY" && \
         chmod +x "$BINARY" && \
         logger -t tg-ws-go "download OK ($(du -sh $BINARY | cut -f1))"
