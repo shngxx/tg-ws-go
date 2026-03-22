@@ -20,9 +20,12 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install UPX
+        run: sudo apt-get install -y upx
+
       - name: Build OpenWrt binaries
         run: |
-          make openwrt-all
+          make openwrt-all COMPRESS=1
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
