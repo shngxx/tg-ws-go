@@ -126,7 +126,8 @@ install:
 	  '' \
 	  '[Service]' \
 	  'Type=simple' \
-	  'ExecStart=$(BINDIR)/tg-ws-go $(TG_WS_GO_FLAGS)' \
+	  'ExecStart=$(BINDIR)/tg-ws-go $(TG_WS_GO_FLAGS) -log-file $(HOME)/tg-ws-go.log -log-max-mb 10 -log-backups 2' \
+	  'StandardError=append:$(HOME)/tg-ws-go-crash.log' \
 	  'Restart=on-failure' \
 	  'RestartSec=5' \
 	  '' \
@@ -138,7 +139,8 @@ install:
 	@echo ""
 	@echo "Done: proxy installed to $(BINDIR)/tg-ws-go, unit $(UNIT)"
 	@echo "Status: systemctl --user status tg-ws-go.service"
-	@echo "Logs:   journalctl --user -u tg-ws-go.service -f"
+	@echo "Logs:   tail -f $(HOME)/tg-ws-go.log"
+	@echo "Crash:  tail -f $(HOME)/tg-ws-go-crash.log"
 
 reinstall: uninstall install
 
