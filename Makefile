@@ -111,7 +111,11 @@ openwrt-all: openwrt-mips openwrt-mipsel openwrt-arm openwrt-arm64 openwrt-x86
 	@echo "OpenWrt binaries built in $(DIST)/:"
 	@ls -lh $(DIST)/
 
-install: $(BINARY)
+install:
+	@if [ ! -f $(BINARY) ]; then \
+		echo "No binary found in $(DIST)/, building from source..."; \
+		$(MAKE) build; \
+	fi
 	install -Dm755 $(BINARY) $(BINDIR)/tg-ws-go
 	mkdir -p $(UNITDIR)
 	@printf '%s\n' \
