@@ -8,6 +8,8 @@ This makes Telegram traffic look like ordinary HTTPS/WebSocket traffic to a Tele
 
 **Zero external dependencies** — pure Go standard library only.
 
+> **Based on** [tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy) by [@Flowseal](https://github.com/Flowseal) — original Python implementation. This project is a Go rewrite.
+
 ---
 
 ## How it works
