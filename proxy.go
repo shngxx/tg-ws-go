@@ -110,6 +110,8 @@ func (s *Server) Run(ctx context.Context, host string, port int) error {
 		}
 		if tc, ok := c.(*net.TCPConn); ok {
 			_ = tc.SetNoDelay(true)
+			_ = tc.SetKeepAlive(true)
+			_ = tc.SetKeepAlivePeriod(30 * time.Second)
 			if s.BufBytes > 0 {
 				_ = tc.SetReadBuffer(s.BufBytes)
 				_ = tc.SetWriteBuffer(s.BufBytes)

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const wsPingInterval = 30 * time.Second
+
 const bridgeBufSize = 65536
 
 // BridgeWS runs bidirectional TCP <-> WebSocket until one side finishes.
@@ -75,6 +77,23 @@ func BridgeWS(client net.Conn, ws *RawWebSocket, label string, dc int, dst strin
 			downPkts++
 			if _, err := client.Write(data); err != nil {
 				return
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		t := time.NewTicker(wsPingInterval)
+		defer t.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				if err := ws.Ping(); err != nil {
+					return
+				}
 			}
 		}
 	}()

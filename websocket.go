@@ -239,6 +239,15 @@ func (w *RawWebSocket) Recv() ([]byte, error) {
 	return nil, net.ErrClosed
 }
 
+// Ping sends a WebSocket ping frame to keep the connection alive.
+func (w *RawWebSocket) Ping() error {
+	if w.closed.Load() {
+		return net.ErrClosed
+	}
+	_, err := w.conn.Write(buildWSFrame(opPing, nil, true))
+	return err
+}
+
 // Close sends close frame and shuts down the connection.
 func (w *RawWebSocket) Close() error {
 	if w.closed.Swap(true) {
@@ -364,6 +373,8 @@ func appendMasked(fb byte, masked []byte, length int, mk [4]byte) []byte {
 
 func setSockOpts(c *net.TCPConn, bufBytes int) {
 	_ = c.SetNoDelay(true)
+	_ = c.SetKeepAlive(true)
+	_ = c.SetKeepAlivePeriod(30 * time.Second)
 	if bufBytes > 0 {
 		_ = c.SetReadBuffer(bufBytes)
 		_ = c.SetWriteBuffer(bufBytes)
